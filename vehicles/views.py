@@ -14,7 +14,7 @@ class VehicleView(APIView):
     def post(self, request):
         # verifica se existe um preço, senao retorna 404
         try:
-            price = Pricing.objects.last()
+            Pricing.objects.last()
         except:
             raise Http404("No price created yet.")
 
@@ -42,8 +42,9 @@ class VehicleView(APIView):
 
         # cria o veículo
         vehicle = Vehicle.objects.create(**serializer.data)
-
         ipdb.set_trace()
+
+        level.vehicles_set.add(vehicle)
 
         serializer = VehicleSerializer(vehicle)
 
