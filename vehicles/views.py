@@ -24,21 +24,21 @@ class VehicleView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         # encontra o nivel de acordo com prioridade e numero de vagas, se nao tiver niveis ou nao tiver vagas retorna 404
-        try:
-            if request.data["vehicle_type"] == "car":
-                level = (
-                    Level.objects.order_by("fill_priority")
-                    .filter(car_spaces__gte=1)
-                    .first()
-                )
-            else:
-                level = (
-                    Level.objects.order_by("fill_priority")
-                    .filter(motorcycle_spaces__gte=1)
-                    .first()
-                )
-        except:
-            raise Http404("No empty entries.")
+        if request.data["vehicle_type"] == "car":
+            level = (
+                Level.objects.order_by("fill_priority")
+                .filter(car_spaces__gte=1)
+                .first()
+            )
+        else:
+            level = (
+                Level.objects.order_by("fill_priority")
+                .filter(motorcycle_spaces__gte=1)
+                .first()
+            )
+
+        if level == []:
+            raise Http404("No empty entries or not created levels.")
 
         # cria o veículo
         vehicle = Vehicle.objects.create(**serializer.data)

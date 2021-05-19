@@ -6,6 +6,7 @@ class LevelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Level
         fields = "__all__"
+        read_only_fields = ["car_set"]
 
     def to_representation(self, instance):
         data = {
