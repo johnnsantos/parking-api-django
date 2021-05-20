@@ -10,4 +10,3 @@ class VehicleSerializer(serializers.Serializer):
     arrived_at = serializers.DateTimeField(read_only=True)
     paid_at = serializers.DateTimeField(read_only=True)
     amount_paid = serializers.FloatField(read_only=True)
-    space = LevelSerializer(read_only=True)
