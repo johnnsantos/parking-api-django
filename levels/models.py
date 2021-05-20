@@ -8,5 +8,10 @@ class Level(models.Model):
     motorcycle_spaces = models.IntegerField()
     car_spaces = models.IntegerField()
     vehicles_set = models.ForeignKey(
-        Vehicle, on_delete=models.CASCADE, blank=True, null=True, default=None
+        Vehicle,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        default=None,
+        related_name="level",
     )

@@ -8,9 +8,45 @@ from .models import Vehicle
 from levels.models import Level
 from levels.serializers import LevelSerializer
 from django.db.models import F
+from datetime import datetime, timezone
+import ipdb
 
 
 class VehicleView(APIView):
+    def put(self, request, vehicle_id):
+        # pega o veiculo no banco
+        vehicle = Vehicle.objects.get(id=vehicle_id)
+        vehicle.paid_at = datetime.now(timezone.utc)
+
+        # encontra o nivel onde o veiculo esta
+        level = vehicle.level
+        ipdb.set_trace()
+        # calculando o pagamento
+        # pega o ultimo preço registrado
+        price = Pricing.objects.last()
+        a = price.a_coefficient
+        b = price.b_coefficient
+        t = (vehicle.arrived_at - datetime.now(timezone.utc)).seconds / 3600
+        payment = float("{:.2f}".format(a + b * t))
+
+        vehicle.amount_paid = payment
+        vehicle.space = None
+
+        vehicle.save()
+
+        serializer = VehicleSerializer(vehicle)
+
+        response_data = {
+            "license_plate": serializer.data["license_plate"],
+            "vehicle_type": serializer.data["vehicle_type"],
+            "arrived_at": serializer.data["arrived_at"],
+            "paid_at": serializer.data["paid_at"],
+            "amount_paid": serializer.data["amount_paid"],
+            "space": None,
+        }
+
+        return Response(response_data)
+
     def post(self, request):
 
         # verifica se existe um preço, senao retorna 404
@@ -29,13 +65,13 @@ class VehicleView(APIView):
         # encontra o nivel de acordo com prioridade e numero de vagas, se nao tiver niveis ou nao tiver vagas retorna 404
         if request.data["vehicle_type"] == "car":
             level = (
-                Level.objects.order_by("-fill_priority")
+                Level.objects.order_by("fill_priority")
                 .filter(car_spaces__gte=1)
                 .first()
             )
         else:
             level = (
-                Level.objects.order_by("-fill_priority")
+                Level.objects.order_by("fill_priority")
                 .filter(motorcycle_spaces__gte=1)
                 .first()
             )
