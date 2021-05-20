@@ -1,3 +1,4 @@
+from levels.models import Level
 from django.db import models
 
 # Create your models here.
@@ -10,6 +11,14 @@ class Vehicle(models.Model):
     arrived_at = models.DateTimeField(auto_now_add=True)
     paid_at = models.DateTimeField(blank=True, null=True)
     amount_paid = models.FloatField(blank=True, null=True)
+    level = models.ForeignKey(
+        Level,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        default=None,
+        related_name="vehicle",
+    )
 
     def save(self, *args, **kwargs):
         self.full_clean()

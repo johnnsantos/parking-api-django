@@ -15,25 +15,36 @@ import ipdb
 class VehicleView(APIView):
     def put(self, request, vehicle_id):
         # pega o veiculo no banco
-        vehicle = Vehicle.objects.get(id=vehicle_id)
+        vehicle = get_object_or_404(Vehicle, id=vehicle_id)
+
         vehicle.paid_at = datetime.now(timezone.utc)
 
         # encontra o nivel onde o veiculo esta
         level = vehicle.level
-        ipdb.set_trace()
+        if vehicle.vehicle_type == "car":
+            level.car_spaces += 1
+        else:
+            level.motorcycle_spaces += 1
+
+        level.save()
+
         # calculando o pagamento
         # pega o ultimo preço registrado
         price = Pricing.objects.last()
+
+        # pega as variaveis de calculo
         a = price.a_coefficient
         b = price.b_coefficient
         t = (vehicle.arrived_at - datetime.now(timezone.utc)).seconds / 3600
+
+        # resultado do pagamento com 2 casas decimais
         payment = float("{:.2f}".format(a + b * t))
 
+        # insere o valor pago e remove o espaço do veiculo
         vehicle.amount_paid = payment
-        vehicle.space = None
+        vehicle.level = None
 
         vehicle.save()
-
         serializer = VehicleSerializer(vehicle)
 
         response_data = {
@@ -75,7 +86,7 @@ class VehicleView(APIView):
                 .filter(motorcycle_spaces__gte=1)
                 .first()
             )
-        if level == []:
+        if not level:
             return Response(
                 {"error": "No empty entries or not created levels."},
                 status=status.HTTP_404_NOT_FOUND,
@@ -92,7 +103,7 @@ class VehicleView(APIView):
 
         # tenta atualizar o nivel, se nao conseguir quer dizer que nao tem nivel criado e retorna 404
         try:
-            Level.objects.filter(id=level.id).update(vehicles_set=vehicle)
+            Vehicle.objects.filter(id=vehicle.id).update(level=level)
         except:
             return Response(
                 {"error": "Not created levels yet."},
