@@ -3,25 +3,26 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from pricings.models import Pricing
-from django.http import Http404
 from .serializers import VehicleSerializer
 from .models import Vehicle
 from levels.models import Level
 from levels.serializers import LevelSerializer
-import ipdb
+from django.db.models import F
 
 
 class VehicleView(APIView):
     def post(self, request):
 
         # verifica se existe um preço, senao retorna 404
-        try:
-            Pricing.objects.last()
-        except:
-            raise Http404("No price created yet.")
+        price = Pricing.objects.last()
+        if not price:
+            return Response(
+                {"error": "No created price yet."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
+        # valida os dados de entrada da requisição
         serializer = VehicleSerializer(data=request.data)
-
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -38,11 +39,13 @@ class VehicleView(APIView):
                 .filter(motorcycle_spaces__gte=1)
                 .first()
             )
-
         if level == []:
-            raise Http404("No empty entries or not created levels.")
+            return Response(
+                {"error": "No empty entries or not created levels."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
-        # cria o veículo
+        # Tenta criar o veículo, se o tipo nao for car ou motorcycle ou se ja existir a placa no sistema, retorna erro
         try:
             vehicle = Vehicle.objects.create(**serializer.data)
         except:
@@ -51,7 +54,22 @@ class VehicleView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        Level.objects.filter(id=level.id).update(vehicles_set=vehicle)
+        # tenta atualizar o nivel, se nao conseguir quer dizer que nao tem nivel criado e retorna 404
+        try:
+            Level.objects.filter(id=level.id).update(vehicles_set=vehicle)
+        except:
+            return Response(
+                {"error": "Not created levels yet."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # se nao estourou nenhum dos erros acima podemos ocupar a vaga do nivel
+        if request.data["vehicle_type"] == "car":
+            Level.objects.filter(id=level.id).update(car_spaces=F("car_spaces") - 1)
+        else:
+            Level.objects.filter(id=level.id).update(
+                motorcycle_spaces=F("motorcycle_spaces") - 1
+            )
 
         serializer = VehicleSerializer(vehicle)
         level_serializer = LevelSerializer(level)
